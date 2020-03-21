@@ -1,4 +1,4 @@
-package hlf_course_chaincode_person
+package main
 
 import (
 	"encoding/json"
@@ -57,7 +57,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to read person information, id %s, due to %s", params[0], err))
 		}
-		
+
 		if state == nil {
 			return shim.Error(fmt.Sprintf("person with id %s doesn't exists", params[0]))
 		}
