@@ -19,9 +19,9 @@
    docker exec fabric-tools configtxgen -profile TwoOrgsOrdererGenesis -outputBlock /home/hlf-course/channel-artifacts/genesis.block -channelID systemchannel
 ```
 
-<!--CRIT 008 Error on outputBlock: Error writing genesis block: open ./channel-artifacts/genesis.block: no such file or directory
-
-Solution : Create channel-artifacts folder before you run the command-->
+>CRIT 008 Error on outputBlock: Error writing genesis block: open ./channel-artifacts/genesis.block: no such file or directory
+><br>
+>Solution : Create channel-artifacts folder before you run the command
 
 ## Generate create channel transaction:
 
