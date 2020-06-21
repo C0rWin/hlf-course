@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
+	//"github.com/hyperledger/fabric/protos/ledger/queryresult"
 )
 
 type BankAccount struct {
@@ -160,6 +163,29 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		return shim.Success(nil)
+
+	},
+	"getHistory": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
+		if len(params) != 1 {
+			return shim.Error(fmt.Sprintf("wrong number of parameters"))
+		}
+		hqi, err := stub.GetHistoryForKey(params[0]) //(HistoryQueryIteratorInterface, error)
+		if err != nil {
+			shim.Error(fmt.Sprintf("failed to read bank account history with number %s, due to %s", params[0], err))
+		}
+
+		var changes []string
+
+		for hqi.HasNext() {
+			km, err := hqi.Next() //(KeyModification, error)
+			if err != nil {
+				shim.Error(fmt.Sprintf("Unexpected error for GetPrivateDataByRangee: %s", err))
+			}
+			changes = append(changes, km.GetValue())
+			//Add unmarshal
+		}
+		hqi.Close()
+		return shim.Success([]byte(fmt.Sprintf("%s", changes)))
 
 	},
 }
