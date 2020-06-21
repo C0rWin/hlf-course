@@ -9,9 +9,9 @@ import (
 )
 
 type BankAccount struct {
-	PersonID      string  `json:person_id`
-	AccountNumber string  `json:account_number`
-	Balance       float64 `json:balance`
+	PersonID      string  `json:"person_id"`
+	AccountNumber string  `json:"account_number"`
+	Balance       float64 `json:"balance"`
 }
 
 type bankManagement struct {
@@ -30,10 +30,14 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		// Need to check whenever account.PersonID is exists
-		personID := fmt.Sprintf("%d", account.PersonID)
-		response := stub.InvokeChaincode("personCC", [][]byte{[]byte("getPerson"), []byte(personID)}, "mychannel")
+
+		response := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(account.PersonID)}, "mychannel")
 		if response.Status == shim.ERROR {
-			return shim.Error(fmt.Sprintf("failed to create bank account for person with id %s, due to %s", personID, err))
+			byteArray, err := json.Marshal(response)
+			if err != nil {
+				return shim.Error(fmt.Sprintf("failed to read input %s, error %s", params[0], err))
+			}
+			return shim.Error(fmt.Sprintf("failed to create bank account for person with id %s, due to %s", account.PersonID, response.Message))
 		}
 
 		accountState, err := stub.GetState(account.AccountNumber)
@@ -70,7 +74,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("failed to read input %s, error %s", state, err))
 		}
 
-		return shim.Success(account.Balance)
+		return shim.Success([]byte(fmt.Sprintf("%f", account.Balance)))
 	},
 
 	"delAccount": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
@@ -87,7 +91,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("bank account with number %s doesn't exists", params[0]))
 		}
 
-		err := stub.DelState(params[0])
+		err = stub.DelState(params[0])
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to delete bank account information with number %s, due to %s", params[0], err))
 		}
@@ -107,7 +111,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		if err := json.Unmarshal([]byte(params[2]), &amountToTransfer); err != nil {
 			return shim.Error(fmt.Sprintf("failed to read input %s, error %s", params[2], err))
 		}
-		
+
 		if params[0] != "0" {
 			senderState, err := stub.GetState(params[0])
 			if err != nil {
@@ -117,7 +121,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			if senderState == nil {
 				return shim.Error(fmt.Sprintf("sender bank account with number %s doesn't exists", params[0]))
 			}
-			if err := json.Unmarshal([]byte(senderState), &account); err != nil {
+			if err := json.Unmarshal([]byte(senderState), &senderAccount); err != nil {
 				return shim.Error(fmt.Sprintf("failed to read input %s, error %s", senderState, err))
 			}
 
@@ -157,7 +161,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 
 		return shim.Success(nil)
 
-	}
+	},
 }
 
 func (b bankManagement) Init(stub shim.ChaincodeStubInterface) peer.Response {
