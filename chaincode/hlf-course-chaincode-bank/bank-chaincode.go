@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
@@ -87,6 +88,57 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		return shim.Success(accountState.Balance)
+	},
+	"transfer": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
+        if len(params) != 3 {
+            return shim.Error(fmt.Sprintf("wrong number of parameters(use: from, to, amount)"))
+        }
+
+		var senderAccount BankAccount
+		var receiverAccount BankAccount
+        from := params[0]
+        to := params[1]
+        amount, err := strconv.ParseFloat(params[2], 64)
+        if err != nil {
+			return shim.Error(fmt.Sprintf("failed to convert amount string to number"))
+		}
+
+        senderState, err := stub.GetState(from)
+        if err != nil {
+            return shim.Error(fmt.Sprintf("failed to get sender account information due to %s", err))
+        }
+        if senderState == nil {
+            return shim.Error(fmt.Sprintf("sender bank account with number %s doesn't exists", from))
+        }
+		if err := json.Unmarshal([]byte(senderState), &senderAccount); err != nil {
+			return shim.Error(fmt.Sprintf("failed to read senderState %s, due to %s", senderState, err))
+		}
+        if senderAccount.Balance - amount < 0 {
+			return shim.Error(fmt.Sprintf("sender doesn't have enough money"))
+		}
+
+		receiverState, err := stub.GetState(to)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("failed to get receiver account information due to %s", err))
+		}
+		if receiverState == nil {
+			return shim.Error(fmt.Sprintf("receiver bank account with number %s doesn't exists", to))
+		}
+		if err := json.Unmarshal([]byte(receiverState), &receiverAccount); err != nil {
+			return shim.Error(fmt.Sprintf("failed to read senderState %s, due to %s", senderState, err))
+		}
+
+		senderAccount.Balance -= amount
+		receiverAccount.Balance += amount
+
+		if err := stub.PutState(from, json.Marshal(senderAccount)); err != nil {
+			shim.Error(fmt.Sprintf("failed to update balance of %s, due to %s", from, err))
+		}
+		if err := stub.PutState(to, json.Marshal(receiverAccount)); err != nil {
+			shim.Error(fmt.Sprintf("failed to update balance of %s, due to %s", to, err))
+		}
+
+		return shim.Success(nil)
 	},
 }
 
