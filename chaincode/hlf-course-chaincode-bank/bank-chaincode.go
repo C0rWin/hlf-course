@@ -140,6 +140,34 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 
 		return shim.Success(nil)
 	},
+	"getHistory": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
+		if len(params) != 1 {
+			return shim.Error(fmt.Sprintf("wrong number of parameters"))
+		}
+
+		var history []string
+		accountId := params[0]
+
+		historyIterator, err := stub.GetHistoryForKey(accountId)
+		if err != nil {
+			shim.Error(fmt.Sprintf("failed to read history of %s, due to %s", accountId, err))
+		}
+
+		for historyIterator.HasNext() {
+			response, err := historyIterator.Next()
+			if err != nil {
+				return shim.Error("failed get Next() for historyIterator")
+			}
+
+			if response.Value >= 0 {
+				history = append(history, fmt.Sprintf("+%s", response.Value))
+			} else {
+				history = append(history, string(response.Value))
+			}
+		}
+
+		return shim.Success(history)
+	},
 }
 
 func (b bankManagement) Init(stub shim.ChaincodeStubInterface) peer.Response {
