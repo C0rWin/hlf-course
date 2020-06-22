@@ -63,14 +63,30 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("failed to get account information due to %s", err))
 		}
 		if accountState == nil {
-			return shim.Error(fmt.Sprintf("bank account with number %s don't exists", accountId))
+			return shim.Error(fmt.Sprintf("bank account with number %s doesn't exists", accountId))
 		}
-		
+
 		if err := stub.DelState(accountId); err != nil {
 			return shim.Error(fmt.Sprintf("failed to delete account id %s, due to %s", params[0], err))
 		}
 
 		return shim.Success(nil)
+	},
+	"getBalance": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
+		if len(params) != 1 {
+			return shim.Error(fmt.Sprintf("wrong number of parameters"))
+		}
+
+		accountId := params[0]
+		accountState, err := stub.GetState(accountId)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("failed to get account information due to %s", err))
+		}
+		if accountState == nil {
+			return shim.Error(fmt.Sprintf("bank account with number %s doesn't exists", accountId))
+		}
+
+		return shim.Success(accountState.Balance)
 	},
 }
 
