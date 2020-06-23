@@ -6,11 +6,11 @@ GENESIS = genesis.block
 CRYPTOGEN = cryptogen
 CONFIGGEN = configtxgen
 
-
 start-all: artifacts
 	$(COMPOSE) -f docker-compose-cli.yaml up
 stop-all:
 	$(COMPOSE) -f docker-compose-cli.yaml down --volumes --remove-orphans
+	$(DOCKER) system prune --volumes -f
 fabric-tools:
 	$(DOCKER) run -it -d --rm  -v $(shell pwd):$(HOME_DIR)/ -w $(HOME_DIR) \
 		--name fabric-tools -e FABRIC_ROOT=$(HOME_DIR)/ \
@@ -30,4 +30,4 @@ clean-artifacts:
 	$(RM) -rf crypto-config/*
 stop-tools:
 	$(DOCKER) stop fabric-tools
-clean-all: clean-artifacts stop-tools
+clean-all: clean-artifacts stop-tools stop-all
