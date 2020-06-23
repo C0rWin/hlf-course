@@ -72,4 +72,6 @@
 ```
   peer chaincode invoke -n persons_chaincode -C mychannel -c '{"Args":["addPerson","{\"id\":1,\"first_name\":\"Dmitry\",\"second_name\":\"Kudryavtsev\",\"address\":\"Home\",\"phone\":\"88005553535\"}"]}'
   peer chaincode invoke -n persons_chaincode -C mychannel -c '{"Args":["getPerson", "1"]}'
+
+  peer chaincode invoke -n bank_chaincode -C mychannel -c '{"Args":["addAccount","{\"person_id\":1,\"account_number\":\"2\",\"balance\":123}"]}'
 ```

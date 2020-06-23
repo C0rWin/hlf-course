@@ -35,7 +35,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 
 		// Need to check whenever account.PersonID is exists
 		personID := fmt.Sprintf("%d", account.PersonID)
-		response := stub.InvokeChaincode("personCC", [][]byte{[]byte("getPerson"), []byte(personID)}, "mychannel")
+		response := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(personID)}, "mychannel")
 		if response.Status == shim.ERROR {
 			return shim.Error(fmt.Sprintf("failed to create bank account for person with id %s, due to %s", personID, err))
 		}
