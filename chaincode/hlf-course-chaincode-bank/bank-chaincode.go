@@ -201,7 +201,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			}
 		}
 		hqi.Close()
-		return shim.Success([]byte(fmt.Sprintf("%s", changes)))
+		return shim.Success([]byte(fmt.Sprintf("operations for bank account with number %s: %s", params[0], changes)))
 
 	},
 }
