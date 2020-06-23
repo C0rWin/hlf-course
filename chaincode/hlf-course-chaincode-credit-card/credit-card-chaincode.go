@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
-	"time"
 )
 
 type Card struct {
@@ -13,7 +12,7 @@ type Card struct {
 	AccountNumber  string    `json:"account_number"`
 	CVC            string    `json:"cvc"`
 	ID             string    `json:"id"`
-	ExpirationDate time.Time `json:"expirationDate"`
+	ExpirationDate string    `json:"expirationDate"`
 }
 
 type cardManagement struct {
@@ -32,14 +31,13 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		// Check if Person exists
-		personID := fmt.Sprintf("%d", card.PersonID)
-		response := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(personID)}, "mychannel");
+		response := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(card.PersonID)}, "mychannel")
 		if response.Status == shim.ERROR {
-			return shim.Error(fmt.Sprintf("failed to check if person with id %s exists", personID))
+			return shim.Error(fmt.Sprintf("failed to check if person with id %s exists", card.PersonID))
 		}
 
 		// Check if Person account exists
-		response = stub.InvokeChaincode("bank_chaincode", [][]byte{[]byte("getBalance"), []byte(card.AccountNumber)}, "mychannel");
+		response = stub.InvokeChaincode("bank_chaincode", [][]byte{[]byte("getBalance"), []byte(card.AccountNumber)}, "mychannel")
 		if response.Status == shim.ERROR {
 			return shim.Error(fmt.Sprintf("failed to check bank account with number %s", card.AccountNumber))
 		}
@@ -85,7 +83,35 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("wrong number of parameters"))
 		}
 
-		return shim.Success(nil)
+		res := ""
+
+		var card Card
+		cardNumber := params[0]
+		cardState, err := stub.GetState(cardNumber)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("failed to get card information, due to %s", err))
+		}
+		if cardState == nil {
+			return shim.Error(fmt.Sprintf("Card with number %s doesn't exists", cardNumber))
+		}
+		if err := json.Unmarshal(cardState, &card); err != nil {
+			return shim.Error(fmt.Sprintf("failed to Unmarshal card due to %s", err))
+		}
+		res += "Card: " + string(cardState)
+
+		personResponse := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(card.PersonID)}, "mychannel")
+		if personResponse.Status == shim.ERROR {
+			return shim.Error(fmt.Sprintf("failed to check if person with id %s exists", card.PersonID))
+		}
+		res += " Person: " + string(personResponse.GetPayload())
+
+		accountResponse := stub.InvokeChaincode("bank_chaincode", [][]byte{[]byte("getBalance"), []byte(card.AccountNumber)}, "mychannel")
+		if accountResponse.Status == shim.ERROR {
+			return shim.Error(fmt.Sprintf("failed to check bank account with number %s", card.AccountNumber))
+		}
+		res += " Account: " + string(accountResponse.GetPayload())
+
+		return shim.Success([]byte(fmt.Sprintf(res)))
 	},
 }
 
