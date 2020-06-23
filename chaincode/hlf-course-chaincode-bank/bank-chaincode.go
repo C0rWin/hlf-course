@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"hlf-course/chaincode/helpers"
 	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -10,9 +13,9 @@ import (
 )
 
 type BankAccount struct {
-	PersonID      uint64  `json:person_id`
-	AccountNumber string  `json:account_number`
-	Balance       float64 `json:balance`
+	PersonID      uint64  `json:"person_id"`
+	AccountNumber string  `json:"account_number"`
+	Balance       float64 `json:"balance"`
 }
 
 type bankManagement struct {
@@ -78,6 +81,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("wrong number of parameters"))
 		}
 
+		var account BankAccount
 		accountId := params[0]
 		accountState, err := stub.GetState(accountId)
 		if err != nil {
@@ -86,8 +90,11 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		if accountState == nil {
 			return shim.Error(fmt.Sprintf("bank account with number %s doesn't exists", accountId))
 		}
+		if err := json.Unmarshal(accountState, &account); err != nil {
+			return shim.Error(fmt.Sprintf("failed to Unmarshal account due to %s", err))
+		}
 
-		return shim.Success(accountState.Balance)
+		return shim.Success(helpers.Float64ToByte(account.Balance))
 	},
 	"transfer": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
         if len(params) != 3 {
@@ -110,7 +117,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
         if senderState == nil {
             return shim.Error(fmt.Sprintf("sender bank account with number %s doesn't exists", from))
         }
-		if err := json.Unmarshal([]byte(senderState), &senderAccount); err != nil {
+		if err := json.Unmarshal(senderState, &senderAccount); err != nil {
 			return shim.Error(fmt.Sprintf("failed to read senderState %s, due to %s", senderState, err))
 		}
         if senderAccount.Balance - amount < 0 {
@@ -124,17 +131,26 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		if receiverState == nil {
 			return shim.Error(fmt.Sprintf("receiver bank account with number %s doesn't exists", to))
 		}
-		if err := json.Unmarshal([]byte(receiverState), &receiverAccount); err != nil {
+		if err := json.Unmarshal(receiverState, &receiverAccount); err != nil {
 			return shim.Error(fmt.Sprintf("failed to read senderState %s, due to %s", senderState, err))
 		}
 
 		senderAccount.Balance -= amount
 		receiverAccount.Balance += amount
 
-		if err := stub.PutState(from, json.Marshal(senderAccount)); err != nil {
+		newSenderAccountByte, err := json.Marshal(senderAccount)
+		if err != nil {
+			shim.Error(fmt.Sprintf("failed to generate bytes of new sender, due to %s", err))
+		}
+		newReceiverAccountByte, err := json.Marshal(senderAccount)
+		if err != nil {
+			shim.Error(fmt.Sprintf("failed to generate bytes of new receiver, due to %s", err))
+		}
+
+		if err := stub.PutState(from, newSenderAccountByte); err != nil {
 			shim.Error(fmt.Sprintf("failed to update balance of %s, due to %s", from, err))
 		}
-		if err := stub.PutState(to, json.Marshal(receiverAccount)); err != nil {
+		if err := stub.PutState(to, newReceiverAccountByte); err != nil {
 			shim.Error(fmt.Sprintf("failed to update balance of %s, due to %s", to, err))
 		}
 
@@ -153,20 +169,38 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			shim.Error(fmt.Sprintf("failed to read history of %s, due to %s", accountId, err))
 		}
 
+		var currentHistoryAccount BankAccount
+		var previousBalance float64
+		isInitialRecord := true
 		for historyIterator.HasNext() {
 			response, err := historyIterator.Next()
 			if err != nil {
 				return shim.Error("failed get Next() for historyIterator")
 			}
 
-			if response.Value >= 0 {
-				history = append(history, fmt.Sprintf("+%s", response.Value))
+			err = json.Unmarshal(response.Value, &currentHistoryAccount)
+
+			if isInitialRecord {
+				history = append(history, fmt.Sprintf("%f", currentHistoryAccount.Balance))
 			} else {
-				history = append(history, string(response.Value))
+				diff := currentHistoryAccount.Balance - previousBalance
+				if diff > 0 {
+					history = append(history, fmt.Sprintf("+%f", diff))
+				} else {
+					history = append(history, fmt.Sprintf("%f", diff))
+				}
 			}
+
+			previousBalance = currentHistoryAccount.Balance
+			isInitialRecord = false
 		}
 
-		return shim.Success(history)
+		buf := &bytes.Buffer{}
+		err = gob.NewEncoder(buf).Encode(history)
+		if err != nil {
+			return shim.Error("failed to encode history to []byte")
+		}
+		return shim.Success(buf.Bytes())
 	},
 }
 

@@ -2,3 +2,5 @@ crypto-config/*
 channel-artifacts/*
 data/*
 .idea/
+go.mod
+go.sum
