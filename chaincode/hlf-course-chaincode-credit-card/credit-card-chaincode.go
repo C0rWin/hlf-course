@@ -64,6 +64,20 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("wrong number of parameters"))
 		}
 
+		cardId := params[0]
+
+		cardState, err := stub.GetState(cardId)
+		if err != nil {
+			return shim.Error(fmt.Sprintf("failed to get card information due to %s", err))
+		}
+		if cardState == nil {
+			return shim.Error(fmt.Sprintf("card with number %s doesn't exists", cardId))
+		}
+
+		if err := stub.DelState(cardId); err != nil {
+			return shim.Error(fmt.Sprintf("failed to delete card with number %s, due to %s", params[0], err))
+		}
+
 		return shim.Success(nil)
 	},
 	"getInfo": func(stub shim.ChaincodeStubInterface, params []string) peer.Response {
