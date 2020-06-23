@@ -42,21 +42,21 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		// Need to check whenever card.AccountNumber is exists
-		response := stub.InvokeChaincode("bank_chaincode", [][]byte{[]byte("getBalance"), []byte(card.AccountNumber)}, "mychannel")
+		response = stub.InvokeChaincode("bank_chaincode", [][]byte{[]byte("getBalance"), []byte(card.AccountNumber)}, "mychannel")
 		if response.Status == shim.ERROR {
-			_, err := json.Marshal(response)
+			_, err = json.Marshal(response)
 			if err != nil {
 				return shim.Error(fmt.Sprintf("failed to read input %s, error %s", params[0], err))
 			}
 			return shim.Error(fmt.Sprintf("failed to create credit card for bank account with number %s, due to %s", card.AccountNumber, response.Message))
 		}
 
-		accountState, err := stub.GetState(card.CardNumber)
+		cardState, err := stub.GetState(card.CardNumber)
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to create credit card due to %s", err))
 		}
 
-		if accountState != nil {
+		if cardState != nil {
 			return shim.Error(fmt.Sprintf("credit card with number %s already exists", card.CardNumber))
 		}
 
