@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-	"github.com/hyperledger/fabric-protos-go/peer"
+	//"github.com/hyperledger/fabric-chaincode-go/shim"
+	//"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
 	//"github.com/hyperledger/fabric/protos/ledger/queryresult"
@@ -36,7 +36,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 
 		response := stub.InvokeChaincode("persons_chaincode", [][]byte{[]byte("getPerson"), []byte(account.PersonID)}, "mychannel")
 		if response.Status == shim.ERROR {
-			byteArray, err := json.Marshal(response)
+			_, err := json.Marshal(response)
 			if err != nil {
 				return shim.Error(fmt.Sprintf("failed to read input %s, error %s", params[0], err))
 			}
@@ -175,14 +175,30 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		var changes []string
-
+		var account BankAccount
+		var previousBalance float64
+		firstRecord := true
 		for hqi.HasNext() {
 			km, err := hqi.Next() //(KeyModification, error)
 			if err != nil {
 				shim.Error(fmt.Sprintf("Unexpected error for GetPrivateDataByRangee: %s", err))
 			}
-			changes = append(changes, km.GetValue())
-			//Add unmarshal
+			err = json.Unmarshal(km.GetValue(), &account)
+			if err != nil {
+				return shim.Error(fmt.Sprintf("failed to desirialize bank account information error %s", err))
+			}
+			if firstRecord {
+				changes = append(changes, "+"+fmt.Sprintf("%f", account.Balance))
+				previousBalance = account.Balance
+				firstRecord = false
+			}
+			if account.Balance > previousBalance {
+				changes = append(changes, "+"+fmt.Sprintf("%f", account.Balance-previousBalance))
+				previousBalance = account.Balance
+			} else if account.Balance < previousBalance {
+				changes = append(changes, "-"+fmt.Sprintf("%f", previousBalance-account.Balance))
+				previousBalance = account.Balance
+			}
 		}
 		hqi.Close()
 		return shim.Success([]byte(fmt.Sprintf("%s", changes)))
