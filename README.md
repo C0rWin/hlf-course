@@ -53,3 +53,25 @@
 ```
   peer channel join -b mychannel.block
 ```
+
+## Install chaincode
+```
+  peer chaincode install -p github.com/chaincode/hlf-course-chaincode-person -n persons_chaincode -v 1.0
+  OR
+  peer chaincode install -p github.com/chaincode/hlf-course-chaincode-bank -n bank_chaincode -v 1.0
+```
+
+## Instantiate chaincode
+```
+  peer chaincode instantiate -n persons_chaincode -v 1.0 -o orderer.example.com:7050 -C mychannel -c '{"Args":[""]}' -P "OR ('Org1MSP.peer', 'Org2MSP.peer')"
+  OR
+  peer chaincode instantiate -n bank_chaincode -v 1.0 -o orderer.example.com:7050 -C mychannel -c '{"Args":[""]}' -P "OR ('Org1MSP.peer', 'Org2MSP.peer')"
+```
+
+## Invoke chaincode
+```
+  peer chaincode invoke -n persons_chaincode -C mychannel -c '{"Args":["addPerson","{\"id\":1,\"first_name\":\"Dmitry\",\"second_name\":\"Kudryavtsev\",\"address\":\"Home\",\"phone\":\"88005553535\"}"]}'
+  peer chaincode invoke -n persons_chaincode -C mychannel -c '{"Args":["getPerson", "1"]}'
+
+  peer chaincode invoke -n bank_chaincode -C mychannel -c '{"Args":["addAccount","{\"person_id\":1,\"account_number\":\"2\",\"balance\":123}"]}'
+```

@@ -10,7 +10,7 @@ import (
 
 // Person structure to capture single person
 type Person struct {
-	ID        uint64 `json:"id"`
+	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"second_name"`
 	Address   string `json:"address"`
@@ -30,8 +30,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		}
 
 		// check that newly added person is not exist
-		personKey := fmt.Sprintf("%d", person.ID)
-		state, err := stub.GetState(personKey)
+		state, err := stub.GetState(person.ID)
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to read stat for key %s, error %s", person.ID, err))
 		}
@@ -40,7 +39,7 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 			return shim.Error(fmt.Sprintf("person with id = %s already exist", person.ID))
 		}
 
-		err = stub.PutState(personKey, []byte(params[0]))
+		err = stub.PutState(person.ID, []byte(params[0]))
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to store person with id = %s, due to %s", person.ID, err))
 		}
