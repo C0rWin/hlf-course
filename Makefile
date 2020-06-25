@@ -1,5 +1,5 @@
 FABRIC_VERSION = 1.4.6
-HOME_DIR = /home/hlf-course
+HOME_DIR = $(CURDIR)
 DOCKER = docker 
 COMPOSE = docker-compose
 GENESIS = genesis.block
@@ -13,7 +13,7 @@ stop-all:
 	$(COMPOSE) -f docker-compose-cli.yaml down --volumes --remove-orphans
 fabric-tools:
 	$(DOCKER) run -it -d --rm  -v $(shell pwd):$(HOME_DIR)/ -w $(HOME_DIR) \
-		--name fabric-tools -e FABRIC_ROOT=/home/hlf-course/ \
+		--name fabric-tools -e FABRIC_ROOT=${HOME_DIR}/ \
 		-e FABRIC_CFG_PATH=$(HOME_DIR)	\
 		hyperledger/fabric-tools:$(FABRIC_VERSION) bash
 crypto: fabric-tools 
@@ -24,10 +24,11 @@ artifacts: crypto
 	$(DOCKER) exec fabric-tools $(CONFIGGEN) -profile TwoOrgsChannel \
 		-channelID mychannel -outputCreateChannelTx=$(HOME_DIR)/channel-artifacts/channel.tx
 	$(DOCKER) exec fabric-tools $(CONFIGGEN) -profile TwoOrgsOrdererGenesis \
-		-outputBlock /home/hlf-course/channel-artifacts/$(GENESIS) -channelID systemchannel
+		-outputBlock /${HOME_DIR}/channel-artifacts/$(GENESIS) -channelID systemchannel
 clean-artifacts:
 	$(RM) -rf channel-artifacts/*
 	$(RM) -rf crypto-config/*
+	$(RM) -rf data/*
 stop-tools:
 	$(DOCKER) stop fabric-tools
 clean-all: clean-artifacts stop-tools
