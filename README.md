@@ -1,55 +1,42 @@
-# This is an example of creating Hyperledger Fabric network
+# Пример блокчейн сети на Hyperledger Fabric
 
+## Начало работы
 
-## Run fabric tools instead of download binaries:
+### Зависимости
 
+* Golang
+* Docker
+* Docker Compose
+* Make
+
+### Установка и использование
+
+1. Склонировать репозиторий
+```sh
+git clone https://github.com/niskhakov/hlf-course
 ```
-   docker run -it -d --rm  -v $(pwd):/home/hlf-course/ -w /home/hlf-course --name fabric-tools -e FABRIC_ROOT=/home/hlf-course/ -e FABRIC_CFG_PATH=/home/hlf-course/ hyperledger/fabric-tools bash
+2. Перейти в каталог репозитория
+```sh
+cd hlf-course
 ```
+3. Запустить файл `scenario.sh`
+```sh
+chmod +x ./scenario.sh
 
-## Generate crypto materials:
-
+./scenario.sh
 ```
-   docker exec fabric-tools cryptogen generate --config=/home/hlf-course/crypto-config.yaml --output=/home/hlf-course/crypto-config/.
-```
+4. После ознакомления с исходным кодом файла `clean.sh` запустить его, запуск данного файла удаляет Докер образы с названием `dev-peer-*`
+```JS
+chmod +x ./clean.sh
 
-## Generate system channel genesis.block:
-
-```
-   docker exec fabric-tools configtxgen -profile TwoOrgsOrdererGenesis -outputBlock /home/hlf-course/channel-artifacts/genesis.block -channelID systemchannel
-```
-
->CRIT 008 Error on outputBlock: Error writing genesis block: open ./channel-artifacts/genesis.block: no such file or directory
-><br>
->Solution : Create channel-artifacts folder before you run the command
-
-## Generate create channel transaction:
-
-```
-  docker exec fabric-tools configtxgen -profile TwoOrgsChannel -channelID mychannel -outputCreateChannelTx=/home/hlf-course/channel-artifacts/channel.tx
-```
-
-
-## Span Fabric network
-
-```
-  docker-compose -f docker-compose-cli.yaml up -d
+(sudo) ./clean.sh
 ```
 
-## Login into cli container
-
-```
-  docker attach cli
-```
-
-## Create channel 
-
-```
-  peer channel create -o orderer.example.com:7050 -c mychannel -f channel-artifacts/channel.tx
-```
-
-## Join channel
-
-```
-  peer channel join -b mychannel.block
-```
+### Сценарий работы `scenario.sh`
+1. Запуск сети Fabric (генерация криптоматериалов и пр.)
+2. Создание канала `mychannel`
+3. Подключение каждого пира каждой организации к этому каналу
+4. Установка 3х чейнкодов на каждый из пиров
+5. Настройка (instantiation) чейнкодов в канале c политикой `OR("Org1MSP.peer","Org2MSP.peer")`
+6. Выполнение методов чейнкодов
+7. (В конце) путем запуска `./clean.sh` остановка сети и удаление файлов и образов
