@@ -10,7 +10,7 @@ import (
 
 // Person structure to capture single person
 type Person struct {
-	ID        uint64 `json:"id"`
+	ID        uint64 `json:id`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"second_name"`
 	Address   string `json:"address"`
@@ -33,16 +33,16 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		personKey := fmt.Sprintf("%d", person.ID)
 		state, err := stub.GetState(personKey)
 		if err != nil {
-			return shim.Error(fmt.Sprintf("failed to read stat for key %s, error %s", person.ID, err))
+			return shim.Error(fmt.Sprintf("failed to read state for key %d, error %s", person.ID, err))
 		}
 
 		if len(state) != 0 {
-			return shim.Error(fmt.Sprintf("person with id = %s already exist", person.ID))
+			return shim.Error(fmt.Sprintf("person with id = %d already exist", person.ID))
 		}
 
-		err = stub.PutState(personKey, []byte(params[0]))
+        err = stub.PutState(personKey, []byte(params[0]))
 		if err != nil {
-			return shim.Error(fmt.Sprintf("failed to store person with id = %s, due to %s", person.ID, err))
+			return shim.Error(fmt.Sprintf("failed to store person with id = %d, due to %s", person.ID, err))
 		}
 
 		return shim.Success(nil)
@@ -69,8 +69,17 @@ var actions = map[string]func(stub shim.ChaincodeStubInterface, params []string)
 		if len(params) != 1 {
 			return shim.Error(fmt.Sprintf("wrong number of parameters"))
 		}
+		
+		state, err := stub.GetState(params[0])
+		if err != nil {
+			return shim.Error(fmt.Sprintf("failed to read person information, id %s, due to %s", params[0], err))
+		}
 
-		err := stub.DelState(params[0])
+		if state == nil {
+			return shim.Error(fmt.Sprintf("person with id %s doesn't exists", params[0]))
+		}
+
+		err = stub.DelState(params[0])
 		if err != nil {
 			return shim.Error(fmt.Sprintf("failed to delete person information, id %s, due to %s", params[0], err))
 		}
